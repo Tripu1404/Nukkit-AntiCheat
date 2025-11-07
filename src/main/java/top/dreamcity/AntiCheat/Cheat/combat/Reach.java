@@ -8,31 +8,24 @@ import top.dreamcity.AntiCheat.Event.CheckCheatEvent;
 import top.dreamcity.AntiCheat.Event.PlayerCheating;
 
 /**
- * Copyright © 2016 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/12/4.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * AntiReach — Detecta jugadores que interactúan con entidades o bloques fuera del rango permitido.
+ * Adaptado a Nukkit moderno (2.x, 2025)
  */
 public class Reach extends Combat {
-    public Block block = null;
-    public Entity entity = null;
 
+    private final Block block;
+    private final Entity entity;
 
     public Reach(Player player, Block block) {
         super(player);
         this.block = block;
+        this.entity = null;
     }
 
     public Reach(Player player, Entity entity) {
         super(player);
         this.entity = entity;
+        this.block = null;
     }
 
     @Override
@@ -40,32 +33,42 @@ public class Reach extends Combat {
         return CheatType.REACH;
     }
 
-
     @Override
     public boolean isCheat() {
         CheckCheatEvent event = new CheckCheatEvent(player, getCheatType());
         Server.getInstance().getPluginManager().callEvent(event);
-        if (player.getGamemode() != 0) event.setCancelled();
+
+        // Evita falsos positivos en modos que no sean survival
+        if (player.getGamemode() != Player.SURVIVAL) {
+            event.setCancelled(true);
+        }
 
         if (event.isCancelled()) return false;
+
         boolean flag = false;
+
+        // Chequeo de alcance a entidades
         if (entity != null) {
-            if (entity.distance(player) >= 4) {
-                flag = true;
-            }
-        } else if (block != null) {
-            if (block.distance(player) >= 6) {
+            double distance = entity.distance(player);
+            if (distance >= 4.0) {
                 flag = true;
             }
         }
+        // Chequeo de alcance a bloques
+        else if (block != null) {
+            double distance = block.distance(player);
+            if (distance >= 6.0) {
+                flag = true;
+            }
+        }
+
+        // Si se detecta una posible trampa
         if (flag) {
-            PlayerCheating event2 = new PlayerCheating(player, getCheatType());
-            Server.getInstance().getPluginManager().callEvent(event2);
-            return !event2.isCancelled();
+            PlayerCheating cheatEvent = new PlayerCheating(player, getCheatType());
+            Server.getInstance().getPluginManager().callEvent(cheatEvent);
+            return !cheatEvent.isCancelled();
         }
+
         return false;
     }
-
 }
-
-
