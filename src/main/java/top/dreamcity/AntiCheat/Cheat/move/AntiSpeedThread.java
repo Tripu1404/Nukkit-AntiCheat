@@ -17,68 +17,62 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Copyright © 2017 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/10/8.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Copyright © 2017 WetABQ&DreamCityAdminGroup
+ * Adapted for modern Nukkit (2025)
  */
 public class AntiSpeedThread extends AsyncTask {
 
-    //private static HashMap<String,HashMap<Integer,Float>> moveSpeed = new HashMap<>();
-    private static HashMap<String, Float> finalSpeed = new HashMap<>();
-    public static HashMap<String, Position> positionHashMap = new HashMap<>();
-    private static HashMap<String, Long> timeCheck = new HashMap<>();
-    private static HashMap<String, Integer> highJump = new HashMap<>();
+    private static final HashMap<String, Float> finalSpeed = new HashMap<>();
+    public static final HashMap<String, Position> positionHashMap = new HashMap<>();
+    private static final HashMap<String, Long> timeCheck = new HashMap<>();
+    private static final HashMap<String, Integer> highJump = new HashMap<>();
 
     public AntiSpeedThread() {
         Server.getInstance().getScheduler().scheduleAsyncTask(AntiCheatAPI.getInstance(), this);
     }
 
+    @Override
     public void onRun() {
         while (true) {
             try {
                 Map<UUID, Player> players = new HashMap<>(Server.getInstance().getOnlinePlayers());
+
                 for (Player player : players.values()) {
-                    for (String name : highJump.keySet()) {
-                        if (Server.getInstance().getPlayerExact(name) == null) {
-                            highJump.remove(name);
-                        }
-                    }
+                    if (player == null || !player.isOnline()) continue;
+
+                    // Limpieza de jugadores desconectados del mapa de salto alto
+                    highJump.entrySet().removeIf(entry ->
+                            Server.getInstance().getPlayerExact(entry.getKey()) == null);
+
+                    // Movimiento horizontal
                     if (positionHashMap.containsKey(player.getName())) {
                         if (!EventListener.tp.containsKey(player.getName())) {
                             Position from = positionHashMap.get(player.getName());
                             Position to = player.getPosition();
-                            float move = ((float) Math.sqrt(Math.pow((int) from.x - (int) to.x, 2) + Math.pow((int) from.z - (int) to.z, 2))) - (float) 0.1 * (System.currentTimeMillis() - timeCheck.get(player.getName()) - 1000);
-                            //putMove(player.getName(),move);
-                            if (player.hasEffect(1)) {
-                                Effect speed = player.getEffect(1);
-                                if (speed.getAmplifier() > 0) {
-                                    int i = speed.getAmplifier() + 1;
-                                    if (i <= 2) {
-                                        double fsp = (double) i * 0.2D;
-                                        move = move - (float) fsp;
-                                    } else {
-                                        double fsp = (double) i * 0.4D;
-                                        move = move - (float) fsp;
-                                    }
+
+                            float move = (float) Math.sqrt(Math.pow(from.x - to.x, 2) + Math.pow(from.z - to.z, 2));
+                            long delta = System.currentTimeMillis() - timeCheck.getOrDefault(player.getName(), System.currentTimeMillis());
+                            move -= 0.1F * (delta - 1000);
+
+                            // Ajuste por efecto Speed
+                            if (player.hasEffect(Effect.SPEED)) {
+                                Effect speed = player.getEffect(Effect.SPEED);
+                                if (speed != null && speed.getAmplifier() >= 0) {
+                                    int amp = speed.getAmplifier() + 1;
+                                    double factor = (amp <= 2) ? amp * 0.2D : amp * 0.4D;
+                                    move -= (float) factor;
                                 }
                             }
-                            if (move < 0) {
-                                move = 0;
-                            }
+
+                            if (move < 0) move = 0;
+
                             setFinalMove(player.getName(), move);
                             positionHashMap.put(player.getName(), player.getPosition());
                             timeCheck.put(player.getName(), System.currentTimeMillis());
                         } else {
-                            if (EventListener.tp.get(player.getName()) > 0) {
-                                EventListener.tp.put(player.getName(), EventListener.tp.get(player.getName()) - 1);
+                            int tp = EventListener.tp.get(player.getName());
+                            if (tp > 0) {
+                                EventListener.tp.put(player.getName(), tp - 1);
                                 setFinalMove(player.getName(), 0);
                                 positionHashMap.put(player.getName(), player.getPosition());
                                 timeCheck.put(player.getName(), System.currentTimeMillis());
@@ -87,52 +81,55 @@ public class AntiSpeedThread extends AsyncTask {
                             }
                         }
                     } else {
-                        //putMove(player.getName(),0F);
                         setFinalMove(player.getName(), 0F);
                         timeCheck.put(player.getName(), System.currentTimeMillis());
                         positionHashMap.put(player.getName(), player.getPosition());
                     }
-                    if (!player.hasEffect(3)) {
+
+                    // Actualizar efecto visual (antiguo MobEffectPacket)
+                    if (!player.hasEffect(Effect.HASTE)) {
                         MobEffectPacket pk = new MobEffectPacket();
                         pk.eid = player.getId();
-                        pk.effectId = 3;
-                        pk.eventId = 3;
+                        pk.effectId = Effect.HASTE;
+                        pk.eventId = MobEffectPacket.EVENT_ADD;
                         player.dataPacket(pk);
                     }
+
+                    // Detección de HighJump
                     if (EventListener.AntiTower.containsKey(player.getName())) {
                         double y = EventListener.AntiTower.get(player.getName()).y;
                         double jumpY = 1.45D;
+
                         if (player.hasEffect(Effect.JUMP)) {
-                            jumpY = Math.pow((player.getEffect(Effect.JUMP).getAmplifier() + 4.2), 2) / 16D;
-                            jumpY = jumpY + 0.1;
+                            jumpY = Math.pow((player.getEffect(Effect.JUMP).getAmplifier() + 4.2), 2) / 16D + 0.1;
                         }
-                        BigDecimal b1 = new BigDecimal(Double.toString(player.y));
-                        BigDecimal b2 = new BigDecimal(Double.toString(y));
+
+                        BigDecimal b1 = new BigDecimal(player.y);
+                        BigDecimal b2 = new BigDecimal(y);
                         double dY = b1.subtract(b2).doubleValue();
+
                         if (dY > jumpY) {
                             int groundY = 1;
-                            while (player.getLevel().getBlockIdAt((int) player.x, (int) player.y - groundY, (int) player.z) == 0 && player.isOnline()) {
+                            while (player.isOnline() && player.getLevel().getBlockIdAt((int) player.x, (int) player.y - groundY, (int) player.z) == 0) {
                                 groundY++;
                             }
                             groundY -= 1;
+
                             if (groundY > 1) {
-                                //System.out.println("high Jump!!!");
-                                player.setMotion(new Vector3(0, 0 - groundY, 0));
+                                player.setMotion(new Vector3(0, -groundY, 0));
                                 player.sendMessage(TextFormat.colorize("&cYou suspected to use HighJump cheat, please stop your behavior &eCheck: AntiCheat"));
-                                if (highJump.containsKey(player.getName())) {
-                                    highJump.put(player.getName(), highJump.get(player.getName()) + 1);
-                                    if (highJump.get(player.getName()) >= 10) {
-                                        Server.getInstance().broadcastMessage(TextFormat.colorize("&dPlayer &b" + player.getName() + " &6suspected to use high jump cheats kicked by AntiCheat!"));
-                                        player.kick(TextFormat.colorize("&cYou suspected to use high jump cheats kicked out by anti-cheat\n&eIf you misjudge the following information to the administrator\nCheck: AntiCheat[HighJump] HighJump:" + highJump.get(player.getName()) + " Speed:" + AntiSpeedThread.getMove(player.getName())) + " onGround:" + player.isOnGround() + " inAirTick:" + player.getInAirTicks());
-                                    }
-                                } else {
-                                    highJump.put(player.getName(), 1);
+
+                                highJump.put(player.getName(), highJump.getOrDefault(player.getName(), 0) + 1);
+                                if (highJump.get(player.getName()) >= 10) {
+                                    Server.getInstance().broadcastMessage(TextFormat.colorize("&dPlayer &b" + player.getName() + " &6suspected to use high jump cheats kicked by AntiCheat!"));
+                                    player.kick(TextFormat.colorize("&cYou suspected to use high jump cheats kicked out by anti-cheat\n&eIf you misjudge the following information to the administrator\nCheck: AntiCheat[HighJump] HighJump:" + highJump.get(player.getName()) + " Speed:" + getMove(player.getName())) + " onGround:" + player.isOnGround() + " inAirTick:" + player.getInAirTicks());
                                 }
                             }
                         }
                         EventListener.AntiTower.remove(player.getName());
                     }
-                    //player.sendTip(TextFormat.GREEN+"                                     Speed: "+getMove(player.getName()));
+
+                    // AntiSpeed principal
                     if (AntiCheatAPI.getInstance().getMasterConfig().getAntiSpeed()) {
                         AntiSpeed antiSpeed = new AntiSpeed(player);
                         if (antiSpeed.isCheat()) {
@@ -144,6 +141,7 @@ public class AntiSpeedThread extends AsyncTask {
                         }
                     }
                 }
+
                 Thread.sleep(1000);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -156,80 +154,6 @@ public class AntiSpeedThread extends AsyncTask {
     }
 
     public static float getMove(String name) {
-        return finalSpeed.get(name);
-        //return 0;
+        return finalSpeed.getOrDefault(name, 0F);
     }
-
-    /*private void putMove(String name,float speed){
-        HashMap<Integer,Float> move = new HashMap<>();
-        if(moveSpeed.containsKey(name)){
-            move = moveSpeed.get(name);
-            if(move.get(1) < 0){
-                move.put(1,speed);
-                moveSpeed.put(name,move);
-                return;
-            }
-            if(move.get(2) < 0){
-                move.put(2,speed);
-                moveSpeed.put(name,move);
-                return;
-            }
-            if(move.get(3) < 0){
-                move.put(3,speed);
-                moveSpeed.put(name,move);
-                return;
-            }
-            if(move.get(4) < 0){
-                move.put(4,speed);
-                moveSpeed.put(name,move);
-                return;
-            }
-            if(move.get(5) < 0){
-                move.put(5,speed);
-                moveSpeed.put(name,move);
-                return;
-            }
-            if(move.get(6) < 0){
-                move.put(6,speed);
-                moveSpeed.put(name,move);
-                return;
-            }
-            if(move.get(7) < 0){
-                move.put(7,speed);
-                moveSpeed.put(name,move);
-                return;
-            }
-            if(move.get(8) < 0){
-                move.put(8,speed);
-                moveSpeed.put(name,move);
-                return;
-            }
-            float fs = (move.get(1) +move.get(2) + move.get(3)+move.get(4)+move.get(5)+move.get(6)+move.get(7)+move.get(8));
-            fs = fs / 8;
-            fs = fs*10;
-            finalSpeed.put(name,fs);
-            //Server.getInstance().getPlayer(name).sendPopup(TextFormat.GREEN+"Speed:"+ fs+"                             \n\n\n");
-            move.put(1,-1F);
-            move.put(2,-1F);
-            move.put(3,-1F);
-            move.put(4,-1F);
-            move.put(5,-1F);
-            move.put(6,-1F);
-            move.put(7,-1F);
-            move.put(8,-1F);
-            moveSpeed.put(name,move);
-        }else{
-            move.put(1,-1F);
-            move.put(2,-1F);
-            move.put(3,-1F);
-            move.put(4,-1F);
-            move.put(5,-1F);
-            move.put(6,-1F);
-            move.put(7,-1F);
-            move.put(8,-1F);
-            moveSpeed.put(name,move);
-            finalSpeed.put(name,0F);
-        }
-    }*/
-
 }
