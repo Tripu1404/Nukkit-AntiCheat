@@ -7,19 +7,12 @@ import top.dreamcity.AntiCheat.Config.MasterConfig;
 import top.dreamcity.AntiCheat.Event.PlayerCheating;
 
 /**
- * Copyright © 2017 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/10/8.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Copyright © 2017 WetABQ&DreamCityAdminGroup
+ * All rights reserved.
+ * Adapted for modern Nukkit versions (2025)
  */
 public class AntiSpeed extends Move {
+
     public AntiSpeed(Player player) {
         super(player);
     }
@@ -31,24 +24,29 @@ public class AntiSpeed extends Move {
 
     @Override
     public boolean isCheat() {
-        //CheckCheatEvent event = new CheckCheatEvent(player, getCheatType());
-        //Server.getInstance().getPluginManager().callEvent(event);
-        if (player.getGamemode() != 0) return false;
-        //if (event.isCancelled()) return false;
-        Boolean flag = false;
+        if (player == null || !player.isOnline() || player.getGamemode() != 0) {
+            return false;
+        }
+
+        boolean flag = false;
         MasterConfig config = AntiCheatAPI.getInstance().getMasterConfig();
+
         if (playerMoveSpeed >= config.getMaxMoveSpeed()) {
-            if (!player.hasEffect(1)) {
-                if (config.getAntiSpeedPingCheck()) {
-                    if (player.getPing() < config.getPingNoCheckValue()) {
-                        flag = true;
-                    }
-                } else {
+            boolean hasEffect = player.hasEffect(1); // SPEED effect ID
+            int ping = player.getPing();
+
+            if (config.getAntiSpeedPingCheck()) {
+                if (ping < config.getPingNoCheckValue()) {
                     flag = true;
                 }
             } else {
+                flag = true;
+            }
+
+            // Si el jugador tiene Speed, se mantiene la misma lógica duplicada del original.
+            if (hasEffect) {
                 if (config.getAntiSpeedPingCheck()) {
-                    if (player.getPing() < config.getPingNoCheckValue()) {
+                    if (ping < config.getPingNoCheckValue()) {
                         flag = true;
                     }
                 } else {
@@ -56,12 +54,13 @@ public class AntiSpeed extends Move {
                 }
             }
         }
+
         if (flag) {
             PlayerCheating event2 = new PlayerCheating(player, getCheatType());
             Server.getInstance().getPluginManager().callEvent(event2);
             return !event2.isCancelled();
         }
+
         return false;
     }
-
 }
