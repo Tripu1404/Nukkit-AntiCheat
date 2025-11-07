@@ -1,58 +1,54 @@
 package top.dreamcity.AntiCheat.Cheat.combat;
 
-
 import cn.nukkit.Player;
+import cn.nukkit.entity.data.Skin;
 import cn.nukkit.entity.Entity;
 import cn.nukkit.entity.EntityHuman;
 import cn.nukkit.level.Position;
 import cn.nukkit.math.Vector3;
-import cn.nukkit.nbt.tag.*;
+import cn.nukkit.nbt.tag.CompoundTag;
+import cn.nukkit.nbt.tag.DoubleTag;
+import cn.nukkit.nbt.tag.FloatTag;
+import cn.nukkit.nbt.tag.ListTag;
 
 /**
- * Copyright © 2016 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/9/16.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * NPC falso utilizado por el sistema AntiCheat (detección de KillAura, etc.)
+ * Adaptado para Nukkit 2.x (Java 17+)
  */
 public class NPC extends EntityHuman {
 
-    public NPC(Position pos, byte[] skin, Player player) {
-        super(pos.getLevel().getChunk((int) pos.getX() >> 4, (int) pos.getZ() >> 4), getEntityNBT(pos, skin));
-        this.setDataFlag(Entity.DATA_FLAGS, Entity.DATA_FLAG_INVISIBLE, false);
-        this.setDataFlag(Entity.DATA_FLAGS, Entity.DATA_FLAG_ALWAYS_SHOW_NAMETAG, false);
-        this.setDataFlag(Entity.DATA_FLAGS, Entity.DATA_FLAG_CAN_SHOW_NAMETAG, false);
+    public NPC(Position pos, Skin skin, Player player) {
+        super(pos.getChunk(), getEntityNBT(pos, skin));
+
+        this.setSkin(skin);
+        this.setNameTagVisible(false);
+        this.setNameTagAlwaysVisible(false);
+        this.setImmobile(true);
         this.setHealth(999);
         this.setMaxHealth(999);
-        if (!this.hasSpawned.containsValue(player)) {
+
+        // Forzar visibilidad al jugador objetivo
+        if (!this.hasSpawned.containsKey(player.getLoaderId())) {
             this.spawnTo(player);
         }
     }
 
-    private static CompoundTag getEntityNBT(Vector3 position, byte[] skin) {
+    private static CompoundTag getEntityNBT(Vector3 position, Skin skin) {
         return new CompoundTag()
-                .putList(new ListTag<DoubleTag>("Pos")
+                .putList("Pos", new ListTag<DoubleTag>()
                         .add(new DoubleTag("", position.x))
                         .add(new DoubleTag("", position.y))
                         .add(new DoubleTag("", position.z)))
-                .putList(new ListTag<DoubleTag>("Motion")
+                .putList("Motion", new ListTag<DoubleTag>()
                         .add(new DoubleTag("", 0))
                         .add(new DoubleTag("", 0))
                         .add(new DoubleTag("", 0)))
-                .putList(new ListTag<FloatTag>("Rotation")
+                .putList("Rotation", new ListTag<FloatTag>()
                         .add(new FloatTag("", 0))
                         .add(new FloatTag("", 0)))
                 .putCompound("Skin", new CompoundTag()
-                        .putByteArray("Data", skin)
-                        .putString("ModelId", "Standard_Steve")
-                )
-                .putString("NameTag", "AntiCheat");
+                        .putByteArray("Data", skin.getSkinData().data)
+                        .putString("ModelId", skin.getSkinId()))
+                .putString("NameTag", "AntiCheat_NPC");
     }
-
 }
