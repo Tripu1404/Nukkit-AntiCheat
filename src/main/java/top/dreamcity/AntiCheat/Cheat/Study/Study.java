@@ -5,73 +5,83 @@ import com.google.gson.Gson;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * Copyright © 2016 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/12/23.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Copyright © 2016 WetABQ&DreamCityAdminGroup
+ * Adaptado para Nukkit moderno (2025)
  */
 public class Study {
-    public final static String API_ADDRESS_SPEED = "http://14.29.54.37:88/AntiCheat/SpeedCheat.php";
 
+    public static final String API_ADDRESS_SPEED = "http://14.29.54.37:88/AntiCheat/SpeedCheat.php";
+
+    /**
+     * Envía datos de estudio al servidor externo (entrenamiento ML)
+     */
     public static void SpeedStudy(double maxSpeed, double avgSpeed, boolean isCheat) {
         sendGet(API_ADDRESS_SPEED, "maxspeed=" + maxSpeed + "&averageSpeed=" + avgSpeed + "&isCheating=" + isCheat);
     }
 
+    /**
+     * Consulta predicción de trampa desde el sistema AntiCheat-ML externo
+     */
     public static boolean SpeedPredict(double maxSpeed, double avgSpeed) {
         try {
+            String jsonText = sendGet(API_ADDRESS_SPEED, "maxspeed=" + maxSpeed + "&averageSpeed=" + avgSpeed);
+            if (jsonText == null || jsonText.isEmpty()) {
+                Server.getInstance().getLogger().warning("AntiCheat-MLSystem >> Empty response from API.");
+                return false;
+            }
+
             Gson gson = new Gson();
-            Map<?, ?> json = gson.fromJson(sendGet(API_ADDRESS_SPEED, "maxspeed=" + maxSpeed + "&averageSpeed=" + avgSpeed), Map.class);
-            return json.get("isCheating").toString().equals("true");
+            Map<?, ?> json = gson.fromJson(jsonText, Map.class);
+            Object result = json.get("isCheating");
+            return result != null && result.toString().equalsIgnoreCase("true");
+
         } catch (Exception e) {
-            Server.getInstance().getLogger().error("AntiCheat-MLSystem >> Error to predict speed cheat.");
+            Server.getInstance().getLogger().error("AntiCheat-MLSystem >> Error predicting speed cheat.", e);
             return false;
         }
     }
 
+    /**
+     * Envía una solicitud GET de manera segura y compatible con Java moderno
+     */
     private static String sendGet(String url, String param) {
-        String result = "";
-        BufferedReader in = null;
+        StringBuilder result = new StringBuilder();
+
         try {
             String urlNameString = url + "?" + param;
             URL realUrl = new URL(urlNameString);
-            URLConnection connection = realUrl.openConnection();
-            connection.setRequestProperty("accept", "*/*");
-            connection.setRequestProperty("connection", "Keep-Alive");
-            connection.setRequestProperty("user-agent",
-                    "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1;SV1)");
-            connection.connect();
-            in = new BufferedReader(new InputStreamReader(
-                    connection.getInputStream()));
-            String line;
-            while ((line = in.readLine()) != null) {
-                result += line;
-            }
-        } catch (Exception e) {
-            System.out.println("Send get error" + e);
-            e.printStackTrace();
-        } finally {
-            try {
-                if (in != null) {
-                    in.close();
-                }
-            } catch (Exception e2) {
-                e2.printStackTrace();
-            }
-        }
-        return result;
-    }
+            HttpURLConnection connection = (HttpURLConnection) realUrl.openConnection();
 
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("User-Agent", "Nukkit-AntiCheat-ML/1.0");
+            connection.setConnectTimeout(4000);
+            connection.setReadTimeout(4000);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                Server.getInstance().getLogger().warning("AntiCheat-MLSystem >> HTTP " + responseCode + " from API");
+                return "";
+            }
+
+            try (BufferedReader in = new BufferedReader(
+                    new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    result.append(line);
+                }
+            }
+
+        } catch (Exception e) {
+            Server.getInstance().getLogger().warning("AntiCheat-MLSystem >> Failed to send GET request: " + e.getMessage());
+        }
+
+        return result.toString();
+    }
 }
