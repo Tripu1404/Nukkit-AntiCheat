@@ -1,29 +1,34 @@
 package top.dreamcity.AntiCheat.Cheat;
 
 import cn.nukkit.Player;
+import cn.nukkit.Server;
 import cn.nukkit.scheduler.AsyncTask;
+import java.util.UUID;
 
 /**
- * Copyright © 2016 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/11/17.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Adapted for modern Nukkit versions (2025)
  */
 public class Report extends AsyncTask {
-    protected Player player;
 
+    private final UUID playerUUID;
+
+    /**
+     * Recibe el jugador y guarda solo su UUID (seguro para tareas asíncronas).
+     */
     public Report(Player player) {
-        this.player = player;
+        this.playerUUID = player.getUniqueId();
     }
 
+    @Override
     public void onRun() {
+        // Aquí iría la lógica de procesamiento en segundo plano,
+        // por ejemplo, recopilar datos de detección o enviar reportes a un servidor.
+    }
 
+    /**
+     * Método auxiliar para obtener el jugador dentro del hilo principal (si es necesario).
+     */
+    public Player getPlayer() {
+        return Server.getInstance().getPlayer(this.playerUUID);
     }
 }
