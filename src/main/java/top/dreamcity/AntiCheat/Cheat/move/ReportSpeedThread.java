@@ -12,85 +12,95 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 /**
- * Copyright © 2016 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/11/17.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Copyright © 2016 WetABQ&DreamCityAdminGroup
+ * Adaptado para Nukkit moderno por ChatGPT (2025)
  */
 public class ReportSpeedThread extends Report implements Runnable {
 
     public ReportSpeedThread(Player player) {
         super(player);
-        Server.getInstance().getScheduler().scheduleAsyncTask(AntiCheatAPI.getInstance(), this);
+        // Programar tarea asíncrona en Nukkit moderno
+        Server.getInstance().getScheduler().scheduleTask(AntiCheatAPI.getInstance(), this, true);
     }
 
+    @Override
     public void run() {
         try {
             boolean flag = false;
+
             for (int f = 0; f < 3; f++) {
-                if (player.isOnline() && !player.isOp() && player.getGamemode() == 0) {
+                if (player != null && player.isOnline() && !player.isOp() && player.getGamemode() == 0) {
                     float move = AntiSpeedThread.getMove(player.getName());
                     Thread.sleep(1000);
                     float move2 = AntiSpeedThread.getMove(player.getName());
                     float m = AntiCheatAPI.getInstance().getMasterConfig().getMaxMoveSpeed();
+
                     if (move >= m || move2 >= m) {
-                        player.setMotion(new Vector3(0, 0, 0));
+                        player.setMotion(Vector3.ZERO);
                         player.teleport(player);
-                        Thread.sleep(1000 * 2);
+                        Thread.sleep(2000);
+
                         move = AntiSpeedThread.getMove(player.getName());
                         Thread.sleep(1000);
                         move2 = AntiSpeedThread.getMove(player.getName());
+
                         if (move >= m || move2 >= m) {
                             if (move >= m && move2 >= m) {
                                 flag = true;
-                            }
-                            if (!flag) {
-                                if (Math.abs(move2 - move) >= m - Math.min(move, move2)) {
-                                    flag = true;
-                                }
+                            } else if (Math.abs(move2 - move) >= m - Math.min(move, move2)) {
+                                flag = true;
                             }
                         }
                     }
 
                     if (flag) {
                         player.kick(TextFormat.AQUA + "Cheat Type: " + TextFormat.RED + "Speed");
+                        break;
                     }
                 }
                 Thread.sleep(1000);
             }
+
             ArrayList<Double> speedList = new ArrayList<>();
-            for (int i = 0; i < 10 && player.isOnline(); i++) {
+            for (int i = 0; i < 10 && player != null && player.isOnline(); i++) {
                 speedList.add((double) AntiSpeedThread.getMove(player.getName()));
                 Thread.sleep(1000);
             }
-            if (player.isOnline()) {
+
+            if (player != null && player.isOnline()) {
                 double maxSpeed = Collections.max(speedList);
                 double allSpeed = 0;
                 for (double speed : speedList) {
-                    allSpeed = allSpeed + speed;
+                    allSpeed += speed;
                 }
-                double avgSpeed = allSpeed / (double) speedList.size();
+                double avgSpeed = allSpeed / speedList.size();
                 boolean isCheating = Study.SpeedPredict(maxSpeed, avgSpeed);
-                Server.getInstance().getLogger().warning("AntiCheat-ML System: MaxSpeed: " + maxSpeed + " AvgSpeed: " + avgSpeed + " isCheating: " + isCheating + " Player: " + player.getName());
+
+                Server.getInstance().getLogger().warning(
+                        String.format("AntiCheat-ML System: MaxSpeed=%.2f AvgSpeed=%.2f Cheating=%s Player=%s",
+                                maxSpeed, avgSpeed, isCheating, player.getName())
+                );
+
                 if (isCheating) {
-                    Server.getInstance().broadcastMessage(TextFormat.colorize("&ePlayer&a" + player.getName() + "&6was detected by AntiCheat-ML machine learning system suspected cheating"));
+                    Server.getInstance().broadcastMessage(
+                            TextFormat.colorize("&ePlayer &a" + player.getName() +
+                                    " &6was detected by AntiCheat-ML machine learning system suspected cheating")
+                    );
                 }
             }
-            if (!flag) {
+
+            if (!flag && player != null) {
                 Server.getInstance().getLogger().notice("AntiCheat System Check Player " + player.getName() + " *NO CHEAT*");
             }
+
             AntiCheatAPI.getInstance().reportPlayer.remove(player.getName());
             AntiCheatAPI.getInstance().reportThread.remove(player.getName());
+
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Thread.currentThread().interrupt();
+            Server.getInstance().getLogger().error("ReportSpeedThread interrupted for player " + player.getName(), e);
+        } catch (Exception e) {
+            Server.getInstance().getLogger().error("Error in ReportSpeedThread for " + player.getName(), e);
         }
     }
-
 }
