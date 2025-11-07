@@ -14,27 +14,19 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
-
 /**
- * Copyright © 2017 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/10/8.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Adaptado para Nukkit moderno (2025)
+ * 
+ * Detección de AutoAim mediante creación temporal de NPC fantasma.
  */
 public class AntiAutoAim extends Combat {
+
+    private NPC npc;
+
     public AntiAutoAim(Player player) {
         super(player);
         addDummy();
     }
-
-    private NPC npc;
 
     @Override
     public CheatType getCheatType() {
@@ -46,41 +38,31 @@ public class AntiAutoAim extends Combat {
         CheckCheatEvent event = new CheckCheatEvent(player, getCheatType());
         Server.getInstance().getPluginManager().callEvent(event);
         if (event.isCancelled()) return false;
+
+        // Añade nuevamente el NPC “fantasma”
         addDummy();
         return false;
     }
 
     private void addDummy() {
-        /*ddPlayerPacket pk = new AddPlayerPacket();
-        eid = pk.entityRuntimeId = pk.entityUniqueId = Entity.entityCount++;
-        pk.item = Item.get(Item.BOW);
-        pk.speedX = pk.speedY = pk.speedZ = 0;
-        pk.pitch = pk.yaw = 90;
-        pk.metadata = new EntityMetadata().put(new FloatEntityData(39, 0.1F));
-        pk.x = (float) player.getX();
-        pk.y = (float) player.getY() + 1.5F;
-        pk.z = (float) player.getZ();
-        AddPlayerPacket pk1 = ((AddPlayerPacket) (pk.clone()));
-        AddPlayerPacket pk2 = ((AddPlayerPacket) (pk.clone()));
-        AddPlayerPacket pk3 = ((AddPlayerPacket) (pk.clone()));
-        AddPlayerPacket pk4 = ((AddPlayerPacket) (pk.clone()));
-        pk1.x++;
-        pk2.x--;
-        pk3.z++;
-        pk4.z--;
-        player.dataPacket(pk1);
-        player.dataPacket(pk2);
-        player.dataPacket(pk3);
-        player.dataPacket(pk4);*/
-        byte[] skin = image(AntiCheatAPI.getInstance().getMasterConfig().getSkinPath());
-        NPC npc = new NPC(new Position(player.getX(), player.getY() - 2, player.getZ(), player.getLevel()), skin, player);
-        npc.setNameTag("'");
-        npc.setScale(0.0001F);
-        this.npc = npc;
+        try {
+            byte[] skin = image(AntiCheatAPI.getInstance().getMasterConfig().getSkinPath());
+            Position pos = new Position(player.getX(), player.getY() - 2, player.getZ(), player.getLevel());
+
+            npc = new NPC(pos, skin, player);
+            npc.setNameTagVisible(false);
+            npc.setScale(0.001f);
+            npc.spawnTo(player);
+
+        } catch (Exception e) {
+            Server.getInstance().getLogger().warning("Error al crear dummy AntiAutoAim: " + e.getMessage());
+        }
     }
 
     public void move(Player player) {
-        npc.teleport(new Location(player.x, player.y - 2, player.z, player.yaw, player.pitch));
+        if (npc != null && npc.isSpawned()) {
+            npc.teleport(new Location(player.getX(), player.getY() - 2, player.getZ(), player.getYaw(), player.getPitch()));
+        }
     }
 
     public NPC getNpc() {
@@ -92,15 +74,14 @@ public class AntiAutoAim extends Combat {
         BufferedImage image;
         try {
             image = ImageIO.read(file);
-        } catch (IOException var5) {
-            throw new RuntimeException(var5);
+        } catch (IOException e) {
+            throw new RuntimeException("Error al leer imagen del skin: " + e.getMessage(), e);
         }
         return parseBufferedImage(image);
     }
 
     private static byte[] parseBufferedImage(BufferedImage image) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
         for (int y = 0; y < image.getHeight(); ++y) {
             for (int x = 0; x < image.getWidth(); ++x) {
                 Color color = new Color(image.getRGB(x, y), true);
@@ -110,9 +91,7 @@ public class AntiAutoAim extends Combat {
                 outputStream.write(color.getAlpha());
             }
         }
-
         image.flush();
         return outputStream.toByteArray();
     }
-
 }
