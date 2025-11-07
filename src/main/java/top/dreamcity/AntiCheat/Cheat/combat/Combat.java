@@ -1,21 +1,13 @@
 package top.dreamcity.AntiCheat.Cheat.combat;
 
-
 import cn.nukkit.Player;
 import top.dreamcity.AntiCheat.Cheat.AntiCheat;
 
 /**
- * Copyright © 2017 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/10/8.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Copyright © 2017 WetABQ & DreamCityAdminGroup
+ * Adaptado para Nukkit moderno (2025)
+ *
+ * Clase base para detección de trampas de combate (KillAura, AutoAim, etc.)
  */
 public abstract class Combat extends AntiCheat {
 
