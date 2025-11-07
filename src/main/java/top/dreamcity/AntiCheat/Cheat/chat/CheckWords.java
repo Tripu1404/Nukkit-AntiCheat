@@ -6,20 +6,12 @@ import top.dreamcity.AntiCheat.AntiCheatAPI;
 import top.dreamcity.AntiCheat.Event.CheckCheatEvent;
 import top.dreamcity.AntiCheat.Event.PlayerCheating;
 
-import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Copyright © 2017 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/10/8.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Adaptado para Nukkit moderno (2025)
+ * 
+ * Detección de palabras sensibles (SENSITIVE_WORDS)
  */
 public class CheckWords extends Chat {
 
@@ -36,10 +28,13 @@ public class CheckWords extends Chat {
     public boolean isCheat() {
         CheckCheatEvent event = new CheckCheatEvent(player, getCheatType());
         Server.getInstance().getPluginManager().callEvent(event);
-        if (event.isCancelled()) return false;
-        ArrayList<String> list = AntiCheatAPI.getInstance().getMasterConfig().getSensitiveWords();
-        for (String sw : list) {
-            if (message.contains(sw)) {
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        List<String> sensitiveList = AntiCheatAPI.getInstance().getMasterConfig().getSensitiveWords();
+        for (String sw : sensitiveList) {
+            if (message.toLowerCase().contains(sw.toLowerCase())) { // Ignora mayúsculas/minúsculas
                 PlayerCheating event2 = new PlayerCheating(player, getCheatType());
                 Server.getInstance().getPluginManager().callEvent(event2);
                 return !event.isCancelled();
@@ -48,14 +43,13 @@ public class CheckWords extends Chat {
         return false;
     }
 
-    public String ChangeMessage() {
+    public String changeMessage() {
         if (isCheat()) {
-            ArrayList<String> list = AntiCheatAPI.getInstance().getMasterConfig().getSensitiveWords();
-            for (String sw : list) {
-                message = message.replaceAll(sw, "**");
+            List<String> sensitiveList = AntiCheatAPI.getInstance().getMasterConfig().getSensitiveWords();
+            for (String sw : sensitiveList) {
+                message = message.replaceAll("(?i)" + sw, "**"); // reemplazo sin distinción de mayúsculas
             }
         }
         return message;
     }
-
 }
