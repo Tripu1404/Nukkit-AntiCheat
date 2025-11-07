@@ -3,76 +3,94 @@ package top.dreamcity.AntiCheat.Cheat.move;
 import cn.nukkit.Player;
 import cn.nukkit.Server;
 import cn.nukkit.block.Block;
+import cn.nukkit.level.Level;
 import cn.nukkit.math.Vector3;
 import cn.nukkit.scheduler.AsyncTask;
 import top.dreamcity.AntiCheat.AntiCheatAPI;
 
 /**
- * Copyright © 2016 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
+ * Copyright © 2016 WetABQ&DreamCityAdminGroup All rights reserved.
  * Created by WetABQ(Administrator) on 2017/12/9.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
  */
 public class AntiWaterWalkPlayerThread extends AsyncTask {
-    private Player player;
-    private boolean onGround;
+
+    private final String playerName;
+    private final boolean onGround;
 
     public AntiWaterWalkPlayerThread(Player player, boolean onGround) {
-        this.player = player;
+        this.playerName = player.getName();
         this.onGround = onGround;
+        // Registrar esta tarea en el scheduler asincrónico
         Server.getInstance().getScheduler().scheduleAsyncTask(AntiCheatAPI.getInstance(), this);
     }
 
     @Override
     public void onRun() {
         try {
+            Player player = Server.getInstance().getPlayerExact(playerName);
+            if (player == null || !player.isOnline()) {
+                return;
+            }
+
             boolean flag = false;
+            Level level = player.getLevel();
+
             if (onGround) {
-                double y = player.y;
+                double y = player.getY();
                 Thread.sleep(3000);
-                if ((player.y - y) > -0.01 && (player.y - y) < 0.01 && player.getLevel().getBlockIdAt((int) player.x, (int) player.y - 1, (int) player.z) == 0 && !player.isOnGround()) {
+                player = Server.getInstance().getPlayerExact(playerName);
+                if (player == null || !player.isOnline()) return;
+
+                double deltaY = player.getY() - y;
+                if (Math.abs(deltaY) < 0.01 &&
+                        level.getBlockIdAt((int) player.getX(), (int) player.getY() - 1, (int) player.getZ()) == 0 &&
+                        !player.isOnGround()) {
                     flag = true;
-                    //System.out.println("water walk a");
                 }
             } else {
-                double y = player.y;
+                double y = player.getY();
                 Thread.sleep(3000);
-                if ((player.y - y) > -0.01 && (player.y - y) < 0.01 && player.isOnGround()) {
-                    int id = player.getLevel().getBlockIdAt((int) player.x, (int) player.y - 1, (int) player.z);
+                player = Server.getInstance().getPlayerExact(playerName);
+                if (player == null || !player.isOnline()) return;
+
+                double deltaY = player.getY() - y;
+                if (Math.abs(deltaY) < 0.01 && player.isOnGround()) {
+                    int id = level.getBlockIdAt((int) player.getX(), (int) player.getY() - 1, (int) player.getZ());
                     if (id == Block.WATER || id == Block.WATER_LILY || id == Block.STILL_WATER) {
-                        //System.out.println("water walk b");
                         player.move(0, -1, 0);
-                        y = player.y;
+                        y = player.getY();
                         Thread.sleep(1000);
-                        if ((player.y - y) > -0.01 && (player.y - y) < 0.01 && player.isOnGround()) {
+                        player = Server.getInstance().getPlayerExact(playerName);
+                        if (player == null || !player.isOnline()) return;
+
+                        double deltaY2 = player.getY() - y;
+                        if (Math.abs(deltaY2) < 0.01 && player.isOnGround()) {
                             int waterY = 1;
-                            id = player.getLevel().getBlockIdAt((int) player.x, (int) player.y - waterY, (int) player.z);
-                            while (id == 0 || id == Block.WATER || id == Block.WATER_LILY || id == Block.STILL_WATER) {
+                            int checkId = level.getBlockIdAt((int) player.getX(), (int) player.getY() - waterY, (int) player.getZ());
+                            while ((checkId == 0 || checkId == Block.WATER || checkId == Block.WATER_LILY || checkId == Block.STILL_WATER)
+                                    && player.isOnline()) {
                                 waterY++;
+                                checkId = level.getBlockIdAt((int) player.getX(), (int) player.getY() - waterY, (int) player.getZ());
                             }
                             waterY -= 1;
-                            player.teleport(new Vector3(player.x, player.y - waterY, player.z));
+                            Vector3 dest = new Vector3(player.getX(), player.getY() - waterY, player.getZ());
+                            player.teleport(dest);
                         }
                     }
                 }
             }
+
             if (flag) {
-                //System.out.println("c");
-                player.setMotion(new Vector3(0, 0, 0));
-                player.teleport(new Vector3(player.x, player.y - 1, player.z));
-                player.move(0, -1, 0);
+                Player finalPlayer = Server.getInstance().getPlayerExact(playerName);
+                if (finalPlayer != null && finalPlayer.isOnline()) {
+                    finalPlayer.setMotion(new Vector3(0, 0, 0));
+                    finalPlayer.teleport(new Vector3(finalPlayer.getX(), finalPlayer.getY() - 1, finalPlayer.getZ()));
+                    finalPlayer.move(0, -1, 0);
+                }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
 }
