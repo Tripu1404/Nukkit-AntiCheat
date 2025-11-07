@@ -3,29 +3,28 @@ package top.dreamcity.AntiCheat.Cheat;
 import cn.nukkit.Player;
 
 /**
- * Copyright © 2017 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/10/8.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Copyright © 2017 WetABQ&DreamCityAdminGroup
+ * All rights reserved.
+ * 
+ * Adapted for modern Nukkit versions by ChatGPT (2025)
  */
 public abstract class AntiCheat {
-    protected Player player;
+
+    protected final Player player;
 
     public AntiCheat(Player player) {
         this.player = player;
     }
 
-    abstract public CheatType getCheatType();
+    /**
+     * Devuelve el tipo de cheat que esta clase detecta.
+     */
+    public abstract CheatType getCheatType();
 
-    abstract public boolean isCheat();
-
+    /**
+     * Ejecuta la detección y devuelve true si el jugador hace trampa.
+     */
+    public abstract boolean isCheat();
 
     public enum CheatType {
         SPEED("speed"),
@@ -37,15 +36,15 @@ public abstract class AntiCheat {
         AUTO_AIM("autoaim"),
         REACH("reach");
 
-        private String typeName;
+        private final String typeName;
 
         CheatType(String typeName) {
             this.typeName = typeName;
         }
 
         public static CheatType fromTypeName(String typeName) {
-            for (CheatType type : CheatType.values()) {
-                if (type.getTypeName().equals(typeName)) {
+            for (CheatType type : values()) {
+                if (type.typeName.equalsIgnoreCase(typeName)) {
                     return type;
                 }
             }
@@ -58,8 +57,7 @@ public abstract class AntiCheat {
 
         @Override
         public String toString() {
-            return this.getTypeName();
+            return this.typeName;
         }
-
     }
 }
