@@ -6,68 +6,79 @@ import cn.nukkit.utils.TextFormat;
 import top.dreamcity.AntiCheat.AntiCheat;
 import top.dreamcity.AntiCheat.Cheat.move.AntiSpeedThread;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 /**
- * Copyright © 2016 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/12/23.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Copyright © 2016 WetABQ&DreamCityAdminGroup
+ * Adaptado para Nukkit moderno (2025)
+ *
+ * Esta clase ejecuta un estudio de velocidad (Machine Learning demo).
  */
 public class StudySpeedThread implements Runnable {
-    private Thread thread;
-    private Player player;
-    private boolean isCheating;
+
+    private final Player player;
+    private final boolean isCheating;
 
     /**
-     * I tried to use machine learning to make a speed test, but it's still under development.
+     * Inicia el hilo de estudio de velocidad
+     *
+     * @param player Jugador a analizar
+     * @param isCheating Indica si el estudio es de tipo "trampa simulada"
      */
-
-    public StudySpeedThread(Player player,boolean isCheating) {
-        this.isCheating = isCheating;
-        this.thread = new Thread(this);
+    public StudySpeedThread(Player player, boolean isCheating) {
         this.player = player;
-        thread.start();
+        this.isCheating = isCheating;
+
+        // Ejecuta el hilo de forma segura sin bloquear Nukkit
+        Server.getInstance().getScheduler().scheduleTask(AntiCheat.getInstance(), this, true);
     }
 
+    @Override
     public void run() {
         try {
             ArrayList<Double> speedList = new ArrayList<>();
-            for (int i = 0; i < 10&&player.isOnline(); i++) {
+
+            for (int i = 0; i < 10 && player.isOnline(); i++) {
                 speedList.add((double) AntiSpeedThread.getMove(player.getName()));
-                player.setSubtitle(TextFormat.colorize("&bDemo&6: &a"+isCheating+" &eCount&6: &a"+i));
-                player.sendTitle("");
-                thread.sleep(1000);
+
+                // Mostrar información visual al jugador (demo)
+                player.sendTitle(
+                        "", // Título vacío
+                        TextFormat.colorize("&bDemo&6: &a" + isCheating + " &eCount&6: &a" + i)
+                );
+
+                Thread.sleep(1000);
             }
-            if(player.isOnline()) {
+
+            if (player.isOnline()) {
                 double maxSpeed = Collections.max(speedList);
-                double allSpeed = 0;
-                for (double speed : speedList) {
-                    allSpeed = allSpeed + speed;
+                double totalSpeed = 0.0;
+
+                for (double s : speedList) {
+                    totalSpeed += s;
                 }
-                double avgSpeed = allSpeed / (double) speedList.size();
-                Server.getInstance().getLogger().warning("StudyData: MaxSpeed: " + maxSpeed + " AvgSpeed: " + avgSpeed + " isCheating: " + isCheating+" Player: "+player.getName());
+
+                double avgSpeed = totalSpeed / speedList.size();
+
+                Server.getInstance().getLogger().warning(
+                        "StudyData: MaxSpeed=" + maxSpeed + " AvgSpeed=" + avgSpeed +
+                                " isCheating=" + isCheating + " Player=" + player.getName()
+                );
+
+                // Enviar datos al sistema ML externo
                 Study.SpeedStudy(maxSpeed, avgSpeed, isCheating);
-                player.sendMessage("StudyData: MaxSpeed: " + maxSpeed + " AvgSpeed: " + avgSpeed + " isCheating: " + isCheating+" Player: "+player.getName());
+
+                player.sendMessage(
+                        TextFormat.colorize("&b[AntiCheat Study] &eMaxSpeed: &a" + maxSpeed +
+                                " &eAvgSpeed: &a" + avgSpeed + " &eCheat: &c" + isCheating)
+                );
             }
+
             AntiCheat.DemoPlayer.remove(player.getName());
-        }catch (Exception e){
-            e.printStackTrace();
+
+        } catch (Exception e) {
+            Server.getInstance().getLogger().error("Error en StudySpeedThread para " + player.getName(), e);
         }
     }
-
 }
