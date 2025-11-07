@@ -2,57 +2,56 @@ package top.dreamcity.AntiCheat.Cheat.chat;
 
 import cn.nukkit.Player;
 import cn.nukkit.Server;
-import cn.nukkit.scheduler.AsyncTask;
+import cn.nukkit.scheduler.Task;
 import top.dreamcity.AntiCheat.AntiCheatAPI;
 
-import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Copyright © 2017 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/10/8.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Adaptado para Nukkit moderno (2025)
+ * 
+ * Hilo encargado de llevar el control de mensajes enviados por los jugadores
+ * para detectar chat rápido (FAST_CHAT).
  */
-public class CheckChatThread extends AsyncTask {
+public class CheckChatThread extends Task {
 
-    private static HashMap<String, Integer> playerChat = new HashMap<>();
+    private static final Map<String, Integer> playerChat = new ConcurrentHashMap<>();
 
     public CheckChatThread() {
-        Server.getInstance().getScheduler().scheduleAsyncTask(AntiCheatAPI.getInstance(), this);
+        // Ejecuta cada segundo
+        Server.getInstance().getScheduler().scheduleRepeatingTask(
+                AntiCheatAPI.getInstance(),
+                this,
+                20 // 20 ticks = 1 segundo
+        );
     }
 
-    public void onRun() {
-        while (true) {
-            try {
-                for (Player player : Server.getInstance().getOnlinePlayers().values()) {
-                    if (playerChat.containsKey(player.getName())) {
-                        if (playerChat.get(player.getName()) > 0) {
-                            playerChat.put(player.getName(), playerChat.get(player.getName()) - 1);
-                        } else {
-                            playerChat.remove(player.getName());
-                        }
-                    }
+    @Override
+    public void onRun(int currentTick) {
+        try {
+            Iterator<Map.Entry<String, Integer>> iterator = playerChat.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Integer> entry = iterator.next();
+                int timeLeft = entry.getValue() - 1;
+                if (timeLeft > 0) {
+                    entry.setValue(timeLeft);
+                } else {
+                    iterator.remove();
                 }
-                Thread.sleep(1000);
-            } catch (Exception e) {
-                e.printStackTrace();
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     public static void addPlayer(String name) {
-        playerChat.put(name, AntiCheatAPI.getInstance().getMasterConfig().getChatSec());
+        int chatSec = AntiCheatAPI.getInstance().getMasterConfig().getChatSec();
+        playerChat.put(name, chatSec);
     }
 
     public static boolean hasPlayer(String name) {
         return playerChat.containsKey(name);
     }
-
 }
