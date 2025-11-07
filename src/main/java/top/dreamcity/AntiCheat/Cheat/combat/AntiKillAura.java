@@ -1,21 +1,15 @@
 package top.dreamcity.AntiCheat.Cheat.combat;
 
 import cn.nukkit.Player;
+import cn.nukkit.Server;
+import top.dreamcity.AntiCheat.Event.CheckCheatEvent;
 
 /**
- * Copyright © 2017 WetABQ&DreamCityAdminGroup All right reserved.
- * Welcome to DreamCity Server Address:dreamcity.top:19132
- * Created by WetABQ(Administrator) on 2017/10/8.
- * |||    ||    ||||                           ||        ||||||||     |||||||
- * |||   |||    |||               ||         ||  |      |||     ||   |||    |||
- * |||   |||    ||     ||||||  ||||||||     ||   ||      ||  ||||   |||      ||
- * ||  |||||   ||   |||   ||  ||||        ||| |||||     ||||||||   |        ||
- * ||  || ||  ||    ||  ||      |        |||||||| ||    ||     ||| ||      ||
- * ||||   ||||     ||    ||    ||  ||  |||       |||  ||||   |||   ||||||||
- * ||     |||      |||||||     |||||  |||       |||| ||||||||      |||||    |
- * ||||
+ * Adaptado para Nukkit moderno (2025)
+ * Detección de KillAura o ataques automáticos.
  */
 public class AntiKillAura extends Combat {
+
     public AntiKillAura(Player player) {
         super(player);
     }
@@ -27,8 +21,17 @@ public class AntiKillAura extends Combat {
 
     @Override
     public boolean isCheat() {
-        //TODO
+        // Lanza evento de chequeo antes de continuar
+        CheckCheatEvent event = new CheckCheatEvent(player, getCheatType());
+        Server.getInstance().getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return false;
+        }
+
+        // TODO: Aquí podrías implementar tu detección de KillAura
+        // (por ejemplo, detección de múltiples ataques por tick o rotaciones instantáneas)
+
+        // Por ahora, solo devuelve false (sin detección activa)
         return false;
     }
-
 }
