@@ -1,10 +1,7 @@
-name: Build Nukkit AntiCheat
+name: Build Nukkit AntiCheat (Manual)
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -20,10 +17,10 @@ jobs:
           java-version: 17
           distribution: temurin
 
-      - name: Download Nukkit
+      - name: Download Nukkit snapshot
         run: |
           mkdir -p libs
-          curl -L -o libs/nukkit.jar https://repo.opencollab.dev/maven-snapshots/cn/nukkit/nukkit/1.0-SNAPSHOT/nukkit-1.0-20251106.144207-1222.jar
+          curl -L -o libs/nukkit.jar "https://repo.opencollab.dev/maven-snapshots/cn/nukkit/nukkit/1.0-SNAPSHOT/nukkit-1.0-20251106.144207-1222.jar"
 
       - name: Compile plugin
         run: |
